@@ -5,5 +5,5 @@ Pillow
 keras==2.2.4
 keras-segmentation
 pyunpack
-tensorflow
 tqdm
+scikit-image
