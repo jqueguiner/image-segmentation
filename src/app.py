@@ -45,6 +45,9 @@ except ImportError:
 app = Flask(__name__)
 
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @app.route("/process", methods=["POST"])
 def process():
@@ -53,10 +56,18 @@ def process():
     output_path = generate_random_filename(result_directory,"png")
 
     try:
-        url = request.json["url"]
-        model = request.json["model"]
+        if 'file' in request.files:
+            file = request.files['file']
+            if allowed_file(file.filename):
+                file.save(input_path)
 
-        download(url, input_path)
+            model = request.form.getlist('model')[0]
+            
+        else:
+            url = request.json["url"]
+            download(url, input_path)
+            model = request.json["model"]
+
 
         if model == "scene_parsing":
             model = model_scene_parsing
@@ -90,6 +101,8 @@ if __name__ == '__main__':
     global upload_directory
     global result_directory
     global model_scene_parsing, model_cityscapes, model_visual_object
+    global ALLOWED_EXTENSIONS
+    ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg'])
 
     result_directory = '/src/results/'
     create_directory(result_directory)
