@@ -28,10 +28,12 @@ from app_utils import square_center_crop
 from app_utils import square_center_crop
 from app_utils import image_crop
 
-import keras_segmentation
+from keras_segmentation import pretrained
 import gc
 import tensorflow as tf
 import keras as K
+from numba import cuda
+import importlib
 
 try:  # Python 3.5+
     from http import HTTPStatus
@@ -69,25 +71,25 @@ def process():
             model = request.json["model"]
 
         if os.getenv('PREWARM', 'TRUE') != 'TRUE':
-            keras_segmentation = reload(keras_segmentation)
+            importlib.reload(keras_segmentation)
 
         if model == "scene_parsing":
             if os.getenv('PREWARM', 'TRUE') == 'TRUE':
                 model = model_scene_parsing
             else:
-                model = keras_segmentation.pretrained.pspnet_50_ADE_20K()
+                model = pretrained.pspnet_50_ADE_20K()
 
         elif model == "cityscapes":
             if os.getenv('PREWARM', 'TRUE') == 'TRUE':
                 model = model_cityscapes
             else:
-                model = keras_segmentation.pretrained.pspnet_101_cityscapes()
+                model = pretrained.pspnet_101_cityscapes()
 
         else :
             if os.getenv('PREWARM', 'TRUE') == 'TRUE':
                 model == model_visual_object 
             else:
-                model = keras_segmentation.pretrained.pspnet_101_voc12()
+                model = pretrained.pspnet_101_voc12()
 
 
         out = model.predict_segmentation(
@@ -133,9 +135,9 @@ if __name__ == '__main__':
     create_directory(upload_directory)
 
     if os.getenv('PREWARM', 'TRUE') == 'TRUE':
-        model_scene_parsing = keras_segmentation.pretrained.pspnet_50_ADE_20K() # load the pretrained model trained on ADE20k dataset
-        model_cityscapes= keras_segmentation.pretrained.pspnet_101_cityscapes() # load the pretrained model trained on Cityscapes dataset
-        model_visual_object = keras_segmentation.pretrained.pspnet_101_voc12() # load the pretrained model trained on Pascal VOC 2012 dataset
+        model_scene_parsing = pretrained.pspnet_50_ADE_20K() # load the pretrained model trained on ADE20k dataset
+        model_cityscapes= pretrained.pspnet_101_cityscapes() # load the pretrained model trained on Cityscapes dataset
+        model_visual_object = pretrained.pspnet_101_voc12() # load the pretrained model trained on Pascal VOC 2012 dataset
     else:
         model_scene_parsing = None
         model_cityscapes = None
