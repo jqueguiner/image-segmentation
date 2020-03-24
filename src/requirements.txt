@@ -7,3 +7,4 @@ keras-segmentation
 pyunpack
 tqdm
 scikit-image
+numba
