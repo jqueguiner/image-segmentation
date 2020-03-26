@@ -138,9 +138,11 @@ if __name__ == '__main__':
         model_cityscapes= pretrained.pspnet_101_cityscapes() # load the pretrained model trained on Cityscapes dataset
         model_visual_object = pretrained.pspnet_101_voc12() # load the pretrained model trained on Pascal VOC 2012 dataset
     else:
-        model_scene_parsing = None
-        model_cityscapes = None
-        model_visual_object = None
+        get_model_bin("https://www.dropbox.com/s/0uxn14y26jcui4v/pspnet50_ade20k.h5?dl=1", "/root/.keras/dataset/pspnet50_ade20k.h5")
+        get_model_bin("https://www.dropbox.com/s/c17g94n946tpalb/pspnet101_cityscapes.h5?dl=1", "/root/.keras/dataset/pspnet101_cityscapes.h5")
+        get_model_bin("https://www.dropbox.com/s/uvqj2cjo4b9c5wg/pspnet101_voc2012.h5?dl=1", "/root/.keras/dataset/pspnet101_voc2012.h5")
+        
+        
 
     port = 5000
     host = '0.0.0.0'
