@@ -29,11 +29,14 @@ from app_utils import square_center_crop
 from app_utils import image_crop
 
 from keras_segmentation import pretrained
-import gc
-import tensorflow as tf
-import keras as K
-from numba import cuda
-import importlib
+
+
+
+
+from threading import Thread
+from multiprocessing import Process, Queue
+
+
 
 try:  # Python 3.5+
     from http import HTTPStatus
@@ -51,11 +54,31 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def segmentation(model, input_path, output_path):
+
+    
+    if model == "scene_parsing":
+        model = pretrained.pspnet_50_ADE_20K()
+
+    elif model == "cityscapes":
+        model = pretrained.pspnet_101_cityscapes()
+    else :
+        model == pretrained.pspnet_101_voc12()
+
+
+    model.predict_segmentation(
+        inp=input_path,
+        out_fname=output_path
+    )
+
+
 @app.route("/process", methods=["POST"])
 def process():
 
     input_path = generate_random_filename(upload_directory,"jpg")
     output_path = generate_random_filename(result_directory,"png")
+
+    input_path = 'input.jpg'
 
     try:
 
@@ -70,44 +93,16 @@ def process():
             download(url, input_path)
             model = request.json["model"]
 
-        if os.getenv('PREWARM', 'TRUE') != 'TRUE':
-            importlib.reload(keras_segmentation)
 
-        if model == "scene_parsing":
-            if os.getenv('PREWARM', 'TRUE') == 'TRUE':
-                model = model_scene_parsing
-            else:
-                model = pretrained.pspnet_50_ADE_20K()
+        if prewarm:
+            segmentation(model, input_path, output_path)
+        else:
+            p = Process(target=segmentation, args=(model, input_path, output_path))
+            p.start()
+            p.join() # this blocks until the process terminates    
 
-        elif model == "cityscapes":
-            if os.getenv('PREWARM', 'TRUE') == 'TRUE':
-                model = model_cityscapes
-            else:
-                model = pretrained.pspnet_101_cityscapes()
-
-        else :
-            if os.getenv('PREWARM', 'TRUE') == 'TRUE':
-                model == model_visual_object 
-            else:
-                model = pretrained.pspnet_101_voc12()
-
-
-        out = model.predict_segmentation(
-            inp=input_path,
-            out_fname=output_path
-        )
-
-        if os.getenv('PREWARM', 'TRUE') != 'TRUE':
-            tf.keras.backend.clear_session()
-            K.clear_session()
-            gc.collect()
-            del model
-            del keras_segmentation
-            model = None
-            cuda.select_device(0)
-            cuda.close()
-
-        callback = send_file(output_path, mimetype='image/png')
+  
+        callback = send_file(output_path, mimetype='image/png')            
 
         return callback, 200
 
@@ -126,6 +121,8 @@ if __name__ == '__main__':
     global result_directory
     global model_scene_parsing, model_cityscapes, model_visual_object
     global ALLOWED_EXTENSIONS
+    global prewarm
+
     ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg'])
 
     result_directory = '/src/results/'
@@ -134,7 +131,9 @@ if __name__ == '__main__':
     upload_directory = '/src/upload/'
     create_directory(upload_directory)
 
-    if os.getenv('PREWARM', 'TRUE') == 'TRUE':
+    prewarm = True if os.getenv('PREWARM', 'TRUE') == 'TRUE' else False
+
+    if prewarm:
         model_scene_parsing = pretrained.pspnet_50_ADE_20K() # load the pretrained model trained on ADE20k dataset
         model_cityscapes= pretrained.pspnet_101_cityscapes() # load the pretrained model trained on Cityscapes dataset
         model_visual_object = pretrained.pspnet_101_voc12() # load the pretrained model trained on Pascal VOC 2012 dataset
