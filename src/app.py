@@ -78,8 +78,6 @@ def process():
     input_path = generate_random_filename(upload_directory,"jpg")
     output_path = generate_random_filename(result_directory,"png")
 
-    input_path = 'input.jpg'
-
     try:
 
         if 'file' in request.files:
